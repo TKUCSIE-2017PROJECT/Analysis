@@ -1,0 +1,115 @@
+from bs4 import BeautifulSoup
+import requests
+import json
+import demjson
+import os
+import jieba
+import jieba.analyse
+import re
+import heapq
+import numpy
+import numpy as np
+
+jieba.set_dictionary('dict.txt')
+jieba.load_userdict('ch_dict.txt')
+jieba.analyse.set_stop_words('ch_stop.txt')
+jieba.analyse.set_stop_words('chrismas\chrismas_stop.txt')
+
+f = open('chrismas\con_js.txt','r',encoding='utf-8-sig')
+t = json.load(f)
+
+
+data_js = []
+def hotexcerpt(keyword, title_list, excerpt_list, sexcount_list):
+    #print (keyword)
+    keytitle_list = []
+    keyexcerpt_list = []
+    keycount_list = []
+    for i in range(0, len(excerpt_list)):
+        if keyword in excerpt_list[i]:
+            keytitle_list.append(title_list[i])
+            keyexcerpt_list.append(excerpt_list[i])
+            keycount_list.append(sexcount_list[i])
+    rank_list = []
+    rank_list = heapq.nlargest(3, enumerate(keycount_list), key=lambda x: x[1])
+    
+    hottitle_list = []
+    hotexcerpt_list = []
+    for i in rank_list:
+        hottitle_list.append(keytitle_list[i[0]])
+        hotexcerpt_list.append(keyexcerpt_list[i[0]])
+    data = {
+        'keyword':keyword,
+        'hot_title0':hottitle_list[0],
+        'hot_title1':hottitle_list[1],
+        'hot_title2':hottitle_list[2],
+        'hotexcerpt_list0':hotexcerpt_list[0],
+        'hotexcerpt_list1':hotexcerpt_list[1],
+        'hotexcerpt_list2':hotexcerpt_list[2]
+    }
+    data_js.append(data)
+    
+male_con = ""
+male_con_title = []
+male_con_list = []
+male_con_hot = []
+female_con = ""
+female_con_title = []
+female_con_list = []
+female_con_hot = []
+
+for i in t:
+    if i['gender'] == "M":
+        male_con = male_con + (i['excerpt'])
+        male_con_title.append(i['title'])
+        male_con_list.append(i['excerpt'])
+        male_con_hot.append(i['likeCount'])
+
+    elif i['gender'] == "F":
+        female_con = female_con + (i['excerpt'])
+        female_con_title.append(i['title'])
+        female_con_list.append(i['excerpt'])
+        female_con_hot.append(i['likeCount'])
+
+
+male_key = jieba.analyse.extract_tags(male_con , 5, True)
+#print (male_key)
+for i in male_key:
+    hotexcerpt(i[0], male_con_title, male_con_list, male_con_hot)
+    
+boy = {
+    'boy':data_js
+}    
+
+data_js = []
+
+female_key = jieba.analyse.extract_tags(female_con , 5, True)
+#print (female_key)
+for i in female_key:
+    hotexcerpt(i[0], female_con_title, female_con_list, female_con_hot)
+
+girl = {
+    'girl':data_js
+}
+
+result = []
+
+a = ""
+for i in t:
+    a = a + i['excerpt']
+rank = jieba.analyse.extract_tags(a, 50, True)
+r = {
+    'rank':rank,
+    'male_rank':male_key,
+    'female_rank':female_key
+}
+#print (rank)
+result.append(boy)
+result.append(girl)
+result.append(r)
+
+print (data_js)
+#print (result)
+f=open('chrismas\chrismas_dcard_js.txt','w',encoding='utf-8')
+json.dump(result,f,indent=5, sort_keys=True,ensure_ascii=False)
+f.close()
